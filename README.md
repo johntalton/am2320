@@ -2,6 +2,8 @@
 
 A simple I²C Temperature and Humidity Sensor.
 
+As always, [Adafruit](https://www.adafruit.com/product/3721) is a good place to start.
+
 ## Mode Selection
 
 The AM2320 support two distinct modes of operation interface. Classic 1-Wire interface, which seems to be the common / preferred method of interaction, and a `Modbus` interface over I²C.
