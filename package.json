@@ -1,0 +1,31 @@
+{
+  "name": "@johntalton/am2320",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/am2320.js",
+  "scripts": {
+    "lint": "./node_modules/.bin/eslint ."
+  },
+  "author": "johntalton@gmail.com",
+  "license": "MIT",
+  "dependencies": {
+    "@johntalton/and-other-delights": "johntalton/and-other-delights",
+    "@johntalton/rasbus": "johntalton/rasbus",
+    "crc": "^3.5.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.0.0-alpha.3",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-config-google": "^0.9.1",
+    "eslint-plugin-fp": "^2.3.0",
+    "eslint-plugin-immutable": "^1.0.0",
+    "eslint-plugin-import": "^2.12.0",
+    "eslint-plugin-jsdoc": "^3.7.0",
+    "eslint-plugin-no-loops": "^0.3.0",
+    "eslint-plugin-no-use-extend-native": "^0.3.12",
+    "eslint-plugin-promise": "^3.7.0",
+    "eslint-plugin-security": "^1.4.0",
+    "eslint-plugin-spellcheck": "0.0.10",
+    "repler": "johntalton/repler"
+  }
+}
