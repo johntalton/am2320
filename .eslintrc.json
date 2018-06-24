@@ -284,12 +284,9 @@
       "skipWords": [
         "johntalton",
         "todo", "const", "eslint", "bitwise",
-        "rasbus", "mcp23", "mcp23017", "Mcp23",
-        "mcp23gpio", "mcp23base",
-        "util", "common8bitpoll", "common16bitpoll", "commoninterlacedblock", "commondualblocks",
-        "commonbank0", "commonbank1", "modeselection", "commondirect",
-        "gpio", "iocon", "ioconA", "iodir", "gppu", "defval", "olat", "gpinten",
-        "unwatch", "undef"
+        "aosong", "asair",
+        "rasbus",
+        "crc"
       ]
     }]
   }

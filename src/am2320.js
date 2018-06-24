@@ -1,7 +1,8 @@
+
 const crc = require('crc');
 
 const DEFAULT_ADDRESS = 0x5C;
-const AUTO_DORMANT_SECS = 3; // todo but min of 2s between reads? investigate
+const AUTO_DORMANT_MSECS = 3; // todo usefulness, investigate
 
 const REGISTERS = {
   HUMIDITY_HIGH: 0x00,
@@ -24,12 +25,21 @@ const REGISTERS = {
   USER_2_LOW: 0x13
 };
 
+// Modbus sutff
 const FUNCTION_READ = 0x03;
 const FUNCTION_WRITE = 0x10;
 
+const ERRORS = {
+  NOT_SUPPORTED: 0x80,
+  ILLEGAL_ADDRESS: 0x81,
+  WRITE_DATA_SCOPE: 0x82,
+  CRC_ERROR: 0x83,
+  WRITE_DISABLED: 0x84
+};
+
 class Converter {
-  static fromValue(value) {
-    const isNeg = (value >> 15) & 0x1 === 0x1;
+  static fromValue(value) { // todo, move to bit utilities
+    const isNeg = ((value >> 15) & 0x1) === 0x1;
     const magnitude = value & 0x7FFF;
     if(isNeg) { return -magnitude; }
     return magnitude;
@@ -42,7 +52,7 @@ class Converter {
 
   static fromTemperature(value) {
     const tempC = Converter.fromValue(value) / 10.0;
-    const tempF = tempC * (9 / 5.0) + 32; // todo we have other sensor that use this
+    const tempF = (tempC * (9 / 5.0)) + 32; // todo we have other sensor that use this
     return {
       C: tempC,
       F: tempF
@@ -60,7 +70,7 @@ class Am2320 {
   }
 
   wake() {
-    console.log(' ** wake')
+    console.log(' ** wake');
     return this.bus.read(0x00).catch(e => console.log('wake read caught, this is normal'));
   }
 
@@ -73,16 +83,25 @@ class Am2320 {
   }
 
   id() {
-    return this.read(REGISTERS.DEVICE_ID, 4)
-      //.then(buffer => buffer.readUInt16BE());
+    return this.read(REGISTERS.DEVICE_ID, 4);
+    // .then(buffer => buffer.readUInt16BE());
   }
 
   status() {
     return this.read(REGISTERS.STATUS, 1).then(buffer => buffer.readUInt8());
   }
 
+  setStatus(value) {
+    return this.write(REGISTERS.STATUS, [value]);
+  }
+
   user1() {
     return this.read(REGISTERS.USER_1_HIGH, 2).then(buffer => buffer.readUInt16BE());
+  }
+
+  setUser1(value) {
+    // todo value is 16, we should split so it write properly
+    return this.write(REGISTERS.USER_1_HIGH, [0, value]);
   }
 
   user2() {
@@ -115,7 +134,7 @@ class Am2320 {
     const command = FUNCTION_READ;
     const readlen = length + 2 + 2; // todo const header_size / crc_size
 
-    //console.log('\tread', register, length);
+    // console.log('\tread', register, length);
     return this.bus.write(command, [register, length])
       .then(() => this.bus.read(register, readlen))
       .then(buffer => {
@@ -124,27 +143,69 @@ class Am2320 {
         // header
         const cmd = buffer.readUInt8(0);
         const len = buffer.readUInt8(1);
-        if(cmd !== command) { throw Error('command missmatch'); }
-        if(len !== length) { throw Error('length missmatch'); }
+        if(cmd !== command) { throw Error('command mismatch'); }
+        if(len !== length) { throw Error('length mismatch'); }
 
         // read length
         const outbuf = buffer.slice(2, buffer.length - 2);
 
-         // crc
+        // crc
         const csum = buffer.readUInt16LE(buffer.length - 2);
 
-        // calculage our own crc (all data except the crc, duh)
+        // calculate our own crc (all data except the crc, duh)
         const data = buffer.slice(0, buffer.length - 2);
         const actual = crc.crc16modbus(data);
-        // console.log('CRC16',  csum, actual);
-        if(csum !== actual) { throw Error('crc missmatch'); }
+        if(csum !== actual) { throw Error('crc mismatch'); }
 
         return outbuf;
       });
   }
 
-  write(register, value) {
-    return Promise.reject(Error('not implemented'));
+  write(register, buf) {
+    const command = FUNCTION_WRITE;
+    const buflen = buf.length;
+    const ary = [...buf]; // todo buffer to array trick
+
+    const data = [register, buflen].concat(ary);
+    const checksum = crc.crc16modbus([command].concat(data));
+    // todo split csum and write as lsb,msb
+    const low = checksum & 0xFF;
+    const high = (checksum >> 8) & 0xFF;
+
+    const readlen = 5; // todo const header size and crc size;
+    const length = buf.length;
+
+    //console.log('write', buflen, data.concat([low, high]), csum.toString(16));
+
+    return this.bus.write(command, data.concat([low, high]))
+      .then(() => this.bus.readBuffer(readlen))
+      .then(buffer => {
+        console.log('buffer', buffer);
+
+        // header
+        const cmd = buffer.readUInt8(0);
+        const addr = buffer.readUInt8(1);
+        const len = buffer.readUInt8(2);
+        if(cmd !== command) { throw Error('command mismatch'); }
+        if(addr !== register) { throw Error('register mismatch'); }
+        if(len !== length) { throw Error('length mismatch'); }
+        console.log('read len', len);
+
+        // read length
+        const outbuf = buffer.slice(2, buffer.length - 2);
+
+        // crc
+        const csum = buffer.readUInt16LE(buffer.length - 2);
+
+        // calculate our own crc (all data except the crc, duh)
+        const data = buffer.slice(0, buffer.length - 2);
+        const actual = crc.crc16modbus(data);
+        if(csum !== actual) { throw Error('crc mismatch'); }
+
+        // todo validate outbuf is the number of bytes writen
+        console.log('outbuf', outbuf);
+
+      });
   }
 }
 
