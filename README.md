@@ -34,9 +34,11 @@ Note: documentation on this or defacto examples would be desirable here (please 
 
 Like the above, the status register is (mostly) unused.  Though some undocumented interaction seems to exist (needs investigation)
 
-#### User 1/2
+#### User 1 / 2
 
 The chip provides two 16bit User registers.  These register are Read/Write, and interface for them is provided by this library.
+
+It is of note that these two registers seem to persist accross power cycles; making them usefull to hold identifing information and/or calibration configuration etc.
 
 #### Temperature / Humidity
 
@@ -51,17 +53,5 @@ The `Modbus` protocol includes a `crc16` checksum on each read / write.  This ad
 Many implemetation bypass the checksum (on both read and write), which provides some interfaction speed, but reduces confidence.  
 
 To this end, this library will provide a unsafe-fast-mode that reduces the `crc16` calls on read.
-
-
-
-
-
-
-
-
-
-
-
-
 
 
