@@ -142,13 +142,14 @@ class Util {
  *
  **/
 class Am2320 {
-  static from(bus) {
-    return Promise.resolve(new Am2320(bus));
+  static from(bus, options) {
+    const opt = options !== undefined ? options : { check: true };
+    return Promise.resolve(new Am2320(bus, opt));
   }
 
-  constructor(bus) {
+  constructor(bus, options) {
     this.bus = bus;
-    this.check = true;
+    this.check = options.check;
 
   }
 
@@ -207,6 +208,18 @@ class Am2320 {
   setUser2(value) {
     // todo value is 16, we should split so it write properly
     return this.write(REGISTERS.USER_2_HIGH, [0, value]);
+  }
+
+  user() {
+    return this.read(REGISTERS.USER_1_HIGH, WORD_SIZE +  WORD_SIZE)
+      .then(buffer => ({
+        user1: buffer.readUInt16BE(0),
+        user2: buffer.readUInt16BE(2)
+      }));
+  }
+
+  setUser(one, two) {
+
   }
 
   humidity() {
