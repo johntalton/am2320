@@ -1,8 +1,12 @@
 # Aosong / Asair AM2320
 
-A simple I²C Temperature and Humidity Sensor.
+A more complete interface for a simple I²C Temperature and Humidity Sensor.
+
+Including chip info and  two 16-bit writable user registers. As well as reporting of modbus errors for all calls.
 
 As always, [Adafruit](https://www.adafruit.com/product/3721) is a good place to start.
+
+![4-pin sensor](https://cdn-learn.adafruit.com/assets/assets/000/051/623/large1024/adafruit_products_pinout.jpg)
 
 ## Mode Selection
 
