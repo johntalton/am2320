@@ -30,6 +30,15 @@ This auto-sleep requires a `wake` command to be sent on the bus prior to interac
 
 While not documented, trying to use a write command more than once per wake period seem to produce failures.
 
+As example, calling all the bulk access methods for this chip.
+```
+  return device.wake()
+    .then(() => device.info().then(console.log))
+    .then(() => device.status().then(console.log))
+    .then(() => device.user().then(console.log))
+    .then(() => device.bulk().then(console.log))
+    
+```
 
 #### Model / Version / ID
 
@@ -41,17 +50,29 @@ Note: documentation on this or defacto examples would be desirable here (please 
 
 Like the above, the status register is (mostly) unused.  Though some undocumented interaction seems to exist (needs investigation)
 
-#### User 1 / 2
+#### User
 
-The chip provides two 16bit User registers.  These register are Read/Write, and interface for them is provided by this library.
+Two 16-bit registers `user1` and `user2` are both read / write.  Access in pair is provided.
 
-It is of note that these two registers seem to persist accross power cycles; making them usefull to hold identifing information and/or calibration configuration etc.
+As an example:
+```
+  return device.wake()
+    .then(() => device.temperature().then(({ C }) => device.setUser1(C)))
+```
+
+It is of note that these two registers seem to persist accross power cycles.
 
 #### Temperature / Humidity
 
 Temperature and Humidity can be accessed individually or in Bulk (both temperature and humidity in single call).
 
 The values are returned in Celcius / Farenheit (for Temperature) and Percent Relative Humidity (%RH), making interaction easy and flexible
+
+```
+  return device.wake()
+    .then(() => device.bulk())
+    .then(({ temperature, humidity }) => console.log('results:', temperature.C, '°C', humidity.percent, 'RH%'))
+```
 
 ## Modbus
 
@@ -62,3 +83,10 @@ Many implemetation bypass the checksum (on both read and write), which provides 
 To this end, this library will provide a unsafe-fast-mode that reduces the `crc16` calls on read.
 
 
+## Architecture limitation
+
+While this api provides the promise interface, it suffers from lacking of mechanism to prevent / detect errors from concurrent access.  Thus `Promise.all()` calls to any of the above api calls would likely fail, as each one requirest multiple underlining I²C `write` and `read` operations.
+
+The Modbus api provides for decoupling the implementation such that each payload send / response has some level of handshake. Though this complexity seems overkill and exclusive access to the bus is left for the caller in this case.
+
+The implementation is also tied to the underlining bus system and it behaviors.
