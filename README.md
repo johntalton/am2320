@@ -22,7 +22,10 @@ The easiest way to achive this is by adding pull-up resistors (to select I²C) t
 
 To save power and to provide more accurate readings (by not heating up the chip) the AM2320 goes into a deep-sleep.  So much so that the I²C interface is put to sleep (which is why many forum post are titled 'not working').
 
-This auto-sleep requires a `wake` command to be sent on the bus prior to interacting with the standard interface.
+This auto-sleep requires a `wake` command to be sent on the bus prior to interacting with the standard interface.  Once woken the chip will responde to I²C commands, however, there is a limited access window to execute command before the chip will return to the sleep state.  
+
+While not documented, trying to use a write command more than once per wake period seem to produce failures.
+
 
 #### Model / Version / ID
 
