@@ -91,12 +91,12 @@ const ERRORS = [
   { msg: 'SERVER DEVICE BUSY', key: ERROR_BASE + 6 } // write to ro register
 ];
 
-/*function waitMSecs(msecs) {
+function waitMSecs(msecs) {
   return new Promise((resolve, reject) => {
     console.log('wait', msecs);
     setTimeout(() => resolve(), msecs);
   });
-}*/
+}
 
 class Converter {
   static fromValue(value) { // todo, move to bit utilities
@@ -219,7 +219,11 @@ class Am2320 {
   }
 
   setUser(one, two) {
-
+    const oneL = one & 0xFF;
+    const oneH = (one >> 8) & 0xFF;
+    const twoL = two & 0xFF;
+    const twoH = (two >> 8) & 0xFF;
+    return this.write(REGISTERS.USER_1_HIGH, [oneH, oneL, twoH,  twoL]);
   }
 
   humidity() {
@@ -270,7 +274,12 @@ class AmModbus {
     perf.wakeMSecs = Date.now();
     perf.lastcall = Math.INFINITY;
 
-    return bus.write(0x00).catch(e => console.log('wake read caught, this is normal'));
+    // what is the best way to send the wake?
+    // return bus.write(0x00, [])
+    // return bus.read(0x00, 0)
+    return bus.read(0x00, 1)
+    // return bus.readBuffer(1)
+      .then(() => false).catch(e => true);
   }
 
   static read(bus, register, length, check) {
@@ -279,22 +288,27 @@ class AmModbus {
     const responsesize = readsizebase + length;
 
     const start = Date.now();
-    if(perf.lastcall === Math.INFINITY) { console.log(' - first'); perf.wakeMSecs = start; }
-    console.log(' - last call delta', start - perf.lastcall);
+    if(perf.lastcall === Math.INFINITY) { console.log(' - first'); }
+//    console.log(' - last call delta', start - perf.lastcall);
     perf.lastcall = start;
     const delta = perf.lastcall - perf.wakeMSecs;
-    console.log(' - delta from wake', delta);
+//    console.log(' - delta from wake', delta);
 
     // console.log('\tread', register, length);
+    //
     return bus.write(command, [register, length])
+    //
+    // const cmdbuf = Buffer.from([command, register, length]);
+    // return bus.writeBuffer(cmdbuf)
+
       //.then(() => waitMSecs(2)) // todo spec notes but javascript is slow, no need :)
       .then(() => bus.readBuffer(responsesize))
-      //.then(() => this.bus.read(command, responsesize))
+      //.then(() => bus.read(command, responsesize))
       .then(buffer => {
         const end = Date.now();
         perf.lastwrite = end;
 
-        console.log(' - write duration', end - perf.lastcall);
+//        console.log(' - write duration', end - perf.lastcall);
 
         return buffer;
       })
@@ -306,7 +320,7 @@ class AmModbus {
         //   something is wrong, and trigger error packet parsing
         const len = buffer.readUInt8(1);
         if(len !== length) {
-          console.log('length vs expected', len, length);
+          console.log('length vs expected', len, length, buffer);
           // parse as error
           // todo check sliced out tail to validate all Zeros
           if(!Util.validateZeroFill(buffer.slice(ERROR_RESPONSE_BYTE_SIZE))) {
@@ -348,10 +362,19 @@ class AmModbus {
     }
     perf.hasWriten = true;
 
-    return bus.write(command, data.concat([low, high]))
+
+    // console.log('ammodbus write', command, data, responsesize);
+    //
+    // console.log('this effects timing')
+    // return bus.write(command, data.concat([low, high]))
+    //
+    const cmdbuf = Buffer.from([command].concat(data).concat([low, high]));
+    return bus.writeBuffer(cmdbuf)
+
       // todo wait 2ms
       .then(() => bus.readBuffer(responsesize))
       .then(buffer => {
+        // console.log('ammodbus write', data, buffer);
         // handle modbus.write return structure
         const len = buffer.readUInt8(2);
         if((len & ERROR_MASK) === ERROR_MASK) {
@@ -359,7 +382,7 @@ class AmModbus {
             console.log(' * trailing zeros not, may not be error');
           }
 
-          const code = Common.parseError(buffer, command, check);
+          const code = Common.parseError(buffer.slice(0, ERROR_RESPONSE_BYTE_SIZE), command, check);
           throw Error(Util.errorForCode(code));
         }
 
@@ -414,7 +437,7 @@ class Common {
     const data = buffer.slice(0, buffer.length - CRC_BYTE_SIZE);
     const actual = crc.crc16modbus(data);
     // console.log(csum, actual);
-    if(csum !== actual) { throw Error('crc mismatch'); }
+    if(csum !== actual) { console.log(buffer);  throw Error('crc mismatch'); }
     if(csum === 0 || actual === 0) { throw Error('crc or actuall zero'); }
 
     return buffer.slice(1, -CRC_BYTE_SIZE);
