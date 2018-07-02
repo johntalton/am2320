@@ -30,6 +30,8 @@ This auto-sleep requires a `wake` command to be sent on the bus prior to interac
 
 While not documented, trying to use a write command more than once per wake period seem to produce failures.
 
+Multiple reads from `bulk` `temperature` or `humidity` will return cached values from captured value at wake.
+
 As example, calling all the bulk access methods for this chip.
 ```javascript
   return device.wake()
