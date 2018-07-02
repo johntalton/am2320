@@ -2,7 +2,13 @@
 
 A more complete interface for a simple I²C Temperature and Humidity Sensor.
 
-Including chip info and  two 16-bit writable user registers. As well as reporting of modbus errors for all calls.
+Including:
+ - access to humidity and temperature as well as status, and info
+ - access to two 16-bit writable user registers
+ - full read / write api
+ - single register and bulk access
+ - full `Promise` / `async` interface
+ - more complet Modbus error reporting
 
 As always, [Adafruit](https://www.adafruit.com/product/3721) is a good place to start.
 
@@ -20,13 +26,36 @@ The AM2320 will select the operational mode (1-Wire vs I²C) on power-on.  This 
 
 The easiest way to achive this is by adding pull-up resistors (to select I²C) to the SCL / SDA lines.  While boards like the Raspberry Pi have existing pull-up resistors they may not be sutable for this particular chip.
 
+## API
+
+#### :blue_book: Class Am2320
+:page_facing_up: `static from(bus)`
+
+:page_facing_up: [`wake()`](#wake)
+
+:page_facing_up: [`info()`](#model--version--id) ([`model()`](#model--version--id), [`version()`](#model--version--id), [`id()`](#model--version--id))
+
+:page_facing_up: [`status()`](#status), [`setStatus(status)`](#status)
+
+:page_facing_up: [`user()`](#user), [`setUser(one, two)`](#user) ([`user1()`](#user), [`setUser1(value)`](#user), [`user1()`](#user), [`setUser1(value)`](#user))
+
+:page_facing_up: [`bulk()`](#temperature--humidity) ([`humidity()`](#temperature--humidity), [`temperature()`](#temperature--humidity))
+
+:page_facing_up: [`read(register, length)`](#read--write)
+
+:page_facing_up: [`write(register, buffer)`](#read--write)
+
 ## I²C interface
+
+TLDR:  As noted in the bellow sections the chip is, fickle at times. 
 
 #### Wake
 
 To save power and to provide more accurate readings (by not heating up the chip) the AM2320 goes into a deep-sleep.  So much so that the I²C interface is put to sleep (which is why many forum post are titled 'not working').
 
-This auto-sleep requires a `wake` command to be sent on the bus prior to interacting with the standard interface.  Once woken the chip will responde to I²C commands, however, there is a limited access window to execute command before the chip will return to the sleep state.  
+This auto-sleep requires a `wake` method call prior to interacting with the standard interface.  Once woken the chip will responde to I²C commands, however, there is a limited access window to execute command before the chip will return to the sleep state. 
+
+While `wake` is titled as such from the perspective of the api, the bus level call is just a read (specific type, see bellow), and all failures are suppressed (as expected on first wake). The result of this is that "waking" the chip is not a garantee of successfull wake, or that the chip was not already woken (and thus effecting the remaining time for command execution).
 
 While not documented, trying to use a write command more than once per wake period seem to produce failures.
 
@@ -50,9 +79,7 @@ As example, calling all the bulk access methods for this chip.
 
 #### Model / Version / ID
 
-For the most part, these are Zeroed on this chip. However, the methods for reading via this library are provided.  
-
-Note: documentation on this or defacto examples would be desirable here (please use issues to report, thanks)
+Reads the `model` `version` and 32-bit chip `id`. Or in a single call to `info`
 
 #### Status
 
@@ -81,6 +108,10 @@ The values are returned in Celcius / Farenheit (for Temperature) and Percent Rel
     .then(() => device.bulk())
     .then(({ temperature, humidity }) => console.log('results:', temperature.C, '°C', humidity.percent, 'RH%'))
 ```
+
+#### Read / Write
+
+Both the `read` and `write` register methods are exposed. Any use cases that bypass the above api should be filled as an issue.
 
 ## Modbus
 
