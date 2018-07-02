@@ -31,6 +31,22 @@ The easiest way to achive this is by adding pull-up resistors (to select I²C) t
 #### :blue_book: Class Am2320
 :page_facing_up: `static from(bus)`
 
+Current usage of `rasbus` abstract for I²C interface
+
+```javascript
+const { Rasbus } = require('@johntalton/rasbus');
+const { Am2320, DEFAULT_ADDRESS } = require('@johntalton/am2320');
+const I2C_DEVICE_ID = 1;
+
+Rasbus.i2c.init(I2C_DEVICE_ID , DEFAULT_ADDRESS)
+  .then(bus => Am2320.from(bus))
+  .then(device => {
+    // wake sleep and interact - before time is up
+    // catch errors liberally within
+  })
+  .catch(err => console.log('setup error', err));
+```
+
 :page_facing_up: [`wake()`](#wake)
 
 :page_facing_up: [`info()`](#model--version--id) ([`model()`](#model--version--id), [`version()`](#model--version--id), [`id()`](#model--version--id))
@@ -124,7 +140,7 @@ To this end, this library will provide a unsafe-fast-mode that reduces the `crc1
 
 ## Architecture limitation
 
-While this api provides the promise interface, it suffers from lacking of mechanism to prevent / detect errors from concurrent access.  Thus `Promise.all()` calls to any of the above api calls would likely fail, as each one requirest multiple underlining I²C `write` and `read` operations.
+While this api provides the promise interface, it suffers from lacking of mechanism to prevent / detect errors from concurrent access.  Thus `Promise.all()` calls to any of the above api calls would likely fail, as each one require multiple underlining I²C `write` and `read` operations.
 
 The Modbus api provides for decoupling the implementation such that each payload send / response has some level of handshake. Though this complexity seems overkill and exclusive access to the bus is left for the caller in this case.
 
@@ -173,7 +189,7 @@ Error: ModBus error message: WRITE_DISABLED
 - The last address is `0x1F` (Retention :smile:). Read from the vally beyond
 ```javascript
   return device.wake()
-  .then(() => device.read(0x2A, 1))
+    .then(() => device.read(0x2A, 1))
 Error: ModBus error message: WRITE_DATA_SCOPE
 ```
 
