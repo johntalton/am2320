@@ -95,13 +95,22 @@ While this api provides the promise interface, it suffers from lacking of mechan
 
 The Modbus api provides for decoupling the implementation such that each payload send / response has some level of handshake. Though this complexity seems overkill and exclusive access to the bus is left for the caller in this case.
 
+
 The implementation is also tied to the underlining bus system and it behaviors.
 
+
 Notably if the chip is queried improperly (to fast, not fast enough, for to long, etc) the it may go into a hard fail state. This state requires power cycle to bring the interface back online (no current combination of read/writes seem to effect its state).
+
 
 Further, the bus layer returns similar error code making error prone to try and evaluate them at this level.  
 
 Other limitation of using the `/dev/i2c-1 ` interface (via `i2c-bus`) present many timing error that could otherwize be mitigated as general exceptions to the bus layer.
+
+
+As noted in reference to `wake`, the timing is left much to the caller.  However, the noted nature of the transaction make this timing prone to external factors, and thus a wider range of enviroment testing is needed.
+
+
+A note should be made of the delicate intermix of I²C `write` `readBuffer` (in `read`) and `writeBuffer` `readBuffer` (in `write`) as well as the use of `read` in the `wake` command.  The use of the SMBus command set, and the lack of consistency indicate poor understanding of chips operation. 
 
 ## Failure profiles
 
@@ -155,6 +164,6 @@ The bus / chip failures seem to be common. while some notes about single write p
 Other failure cases seems to exist
  - the `wake`/`bulk` poll cycle seems to fall into a toggling success / failure state
  - long runs of calls (1K calls to `bulk` in a row) can knock the chip offline, requiring power cycle
- 
+ - all timing error represnet themselves as critical bus failures
  
  
