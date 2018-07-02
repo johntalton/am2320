@@ -1,8 +1,12 @@
 # Aosong / Asair AM2320
 
-A simple I²C Temperature and Humidity Sensor.
+A more complete interface for a simple I²C Temperature and Humidity Sensor.
+
+Including chip info and  two 16-bit writable user registers. As well as reporting of modbus errors for all calls.
 
 As always, [Adafruit](https://www.adafruit.com/product/3721) is a good place to start.
+
+![4-pin sensor](https://cdn-learn.adafruit.com/assets/assets/000/051/623/large1024/adafruit_products_pinout.jpg)
 
 ## Mode Selection
 
@@ -22,7 +26,25 @@ The easiest way to achive this is by adding pull-up resistors (to select I²C) t
 
 To save power and to provide more accurate readings (by not heating up the chip) the AM2320 goes into a deep-sleep.  So much so that the I²C interface is put to sleep (which is why many forum post are titled 'not working').
 
-This auto-sleep requires a `wake` command to be sent on the bus prior to interacting with the standard interface.
+This auto-sleep requires a `wake` command to be sent on the bus prior to interacting with the standard interface.  Once woken the chip will responde to I²C commands, however, there is a limited access window to execute command before the chip will return to the sleep state.  
+
+While not documented, trying to use a write command more than once per wake period seem to produce failures.
+
+As example, calling all the bulk access methods for this chip.
+```javascript
+  return device.wake()
+    // sleep
+    .then(() => device.info().then(console.log))
+    .then(() => device.status().then(console.log))
+    .then(() => device.user().then(console.log))
+    .then(() => device.bulk().then(console.log))
+    
+```
+
+:warning: Sleep after wake is recommended. Anywhere from 5 to 400 ms has been observed to work. Many standard `Promise` timeout implementations exist, and a `setTimeout` wrapper works well.
+
+(note that while some timings work with *no* wait; others result usefull success ratio, but most fail without a minimum delay. While at the high end, the risk of allowing the chip to return to sleep state incresses).
+
 
 #### Model / Version / ID
 
@@ -34,17 +56,29 @@ Note: documentation on this or defacto examples would be desirable here (please 
 
 Like the above, the status register is (mostly) unused.  Though some undocumented interaction seems to exist (needs investigation)
 
-#### User 1 / 2
+#### User
 
-The chip provides two 16bit User registers.  These register are Read/Write, and interface for them is provided by this library.
+Two 16-bit registers `user1` and `user2` are both read / write.  Access in pair is provided.
 
-It is of note that these two registers seem to persist accross power cycles; making them usefull to hold identifing information and/or calibration configuration etc.
+As an example:
+```javascript
+  return device.wake()
+    .then(() => device.temperature().then(({ C }) => device.setUser1(C)))
+```
+
+It is of note that these two registers seem to persist accross power cycles.
 
 #### Temperature / Humidity
 
 Temperature and Humidity can be accessed individually or in Bulk (both temperature and humidity in single call).
 
 The values are returned in Celcius / Farenheit (for Temperature) and Percent Relative Humidity (%RH), making interaction easy and flexible
+
+```javascript
+  return device.wake()
+    .then(() => device.bulk())
+    .then(({ temperature, humidity }) => console.log('results:', temperature.C, '°C', humidity.percent, 'RH%'))
+```
 
 ## Modbus
 
@@ -55,3 +89,81 @@ Many implemetation bypass the checksum (on both read and write), which provides 
 To this end, this library will provide a unsafe-fast-mode that reduces the `crc16` calls on read.
 
 
+## Architecture limitation
+
+While this api provides the promise interface, it suffers from lacking of mechanism to prevent / detect errors from concurrent access.  Thus `Promise.all()` calls to any of the above api calls would likely fail, as each one requirest multiple underlining I²C `write` and `read` operations.
+
+The Modbus api provides for decoupling the implementation such that each payload send / response has some level of handshake. Though this complexity seems overkill and exclusive access to the bus is left for the caller in this case.
+
+
+The implementation is also tied to the underlining bus system and it behaviors.
+
+
+Notably if the chip is queried improperly (to fast, not fast enough, for to long, etc) the it may go into a hard fail state. This state requires power cycle to bring the interface back online (no current combination of read/writes seem to effect its state).
+
+
+Further, the bus layer returns similar error code making error prone to try and evaluate them at this level.  
+
+Other limitation of using the `/dev/i2c-1 ` interface (via `i2c-bus`) present many timing error that could otherwize be mitigated as general exceptions to the bus layer.
+
+
+As noted in reference to `wake`, the timing is left much to the caller.  However, the noted nature of the transaction make this timing prone to external factors, and thus a wider range of enviroment testing is needed.
+
+
+A note should be made of the delicate intermix of I²C `write` `readBuffer` (in `read`) and `writeBuffer` `readBuffer` (in `write`) as well as the use of `read` in the `wake` command.  The use of the SMBus command set, and the lack of consistency indicate poor understanding of chips operation. 
+
+## Failure profiles
+
+### Codes
+
+While high level api calls (such as `info`, `bulk`, `humidity` etc) are the intended public interface, the Modbus `read` / `write` are also exposed.
+
+And while the high level api should not produce these errors, they can still be exposed when parsing unexpected / invalid bus data as a result of malformed or corrupted interaction. 
+
+
+Some standard rules form the datasheet:
+
+- Reading more then allowed (ten registers / bytes)
+```javascript
+  return device.wake()
+    .then(() => device.read(0x00, 11))
+Error: ModBus error message: ILLEGAL_ADDRESS
+```
+
+- Write to the `status` register (a single byte register), and attempt to write to `user1` 16-bit register.  While both (all three) are writable registers, the `status` register is explicitly to be wrien alone (Further enforcing the usfullness of the `setStatus` method).
+```javascript
+  return device.wake()
+    .then(() => device.write(0x0F, [0b00000001, 0x00, 0x25]))
+Error: ModBus error message: WRITE_DISABLED
+```
+
+- The last address is `0x1F` (Retention :smile:). Read from the vally beyond
+```javascript
+  return device.wake()
+  .then(() => device.read(0x2A, 1))
+Error: ModBus error message: WRITE_DATA_SCOPE
+```
+
+- Write more then allowed (ten registers / bytes)
+```javascript
+  return device.wake()
+    .then(() => device.write(REGISTERS.USER_1_HIGH, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+Error: ModBus error message: WRITE_DATA_SCOPE
+```
+
+ - Start writing to a register that is writable, but then overlaps with non-writable register. In this case we shif our four byte (or two `user1` and `user2` 16-bit registers) to a higher address value, in this case `USER_1_LOW` (a value bulk write of the user register via the `setUser` method would address from `USER_1_HIGH`).
+```javascript
+  return device.wake()
+    .then(() => device.write(REGISTERS.USER_1_LOW, [0x00, 0x2A, 0x00, 0x25]))
+Error: ModBus error message: WRITE_DISABLED
+```
+
+### Other
+The bus / chip failures seem to be common. while some notes about single write per wake sesion and limiting number of reads and the timing between the have been noted above.  
+
+Other failure cases seems to exist
+ - the `wake`/`bulk` poll cycle seems to fall into a toggling success / failure state
+ - long runs of calls (1K calls to `bulk` in a row) can knock the chip offline, requiring power cycle
+ - all timing error represnet themselves as critical bus failures
+ 
+ 
