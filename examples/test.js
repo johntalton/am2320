@@ -39,7 +39,7 @@ Rasbus.i2c.init(i2cbusid, DEFAULT_ADDRESS)
       })
 
       // woke false, indicating the bus was already valid
-      //   following commands will fail after this, some times
+      //  but are limited time window as no reference time of last wake
       //.then(() => device.wake()).then(woke => console.log('rewoke', woke))
 
 
@@ -98,13 +98,14 @@ Rasbus.i2c.init(i2cbusid, DEFAULT_ADDRESS)
       .then(() => device.user1().then(user1 => device.setUser(user1 + 1, 42)))
       //.then(() => device.user1().then(user1 => waitMSecs(151).then(() => device.setUser(user1 + 1, 42))))
 
-//      .then(() => waitMSecs(152))
+      //.then(() => waitMSecs(300))
 
-     // .then(() => device.user1()).then(user1 => console.log('user1', user1))
+      .then(() => device.user1()).then(user1 => console.log('user1', user1))
 
       // .then(() => device.setUser2(69))
      // .then(() => device.user2()).then(user2 => console.log('user2', user2))
 
+      //.then(() => waitMSecs(200))
 
 
       // .then(() => device.user1()).then(user1 => console.log('user1', user1))
@@ -126,7 +127,7 @@ Rasbus.i2c.init(i2cbusid, DEFAULT_ADDRESS)
 */
 
 
-      // .then(() => waitMSecs(100))
+       //.then(() => waitMSecs(200))
 
       // .then(() => Promise.all([device.temperature(), device.humidity()]))
       //.then(() => device.bulk())
@@ -135,7 +136,7 @@ Rasbus.i2c.init(i2cbusid, DEFAULT_ADDRESS)
       //.then(() => waitMSecs(50))
 
       .then(() => {
-        // todo, multiple calls to bulk here make not change in the values returned
+        // note, multiple calls to bulk seem to return single cached value, just demo
 
         const MAX_I2C_BREAK_RUN = 1000; // todo observation, after about a K the device will start to fail (power reset needed)
         const MAX_BULK_RUN = 120; // todo observation 140 before sleep reset, need timeing track
@@ -146,17 +147,21 @@ Rasbus.i2c.init(i2cbusid, DEFAULT_ADDRESS)
         // note that the first run number seems to be more unstable, where the next block of max run seem to be a stable value
 
         // choosing a small range to validate (returns the same value until next wake cycle)
-        const range = (new Array(MAX_FIRST_BULK_RUN)).fill(0);
+        const range = (new Array(5)).fill(0);
         return  Promise_serial(range.map((value, index) => {
           return () => {
+//return device.humidity().then(({ percent }) => console.log('RH %', percent))
             return device.bulk()
             .then(({ temperature, humidity }) =>
               //console.log('bulk log', temperature, humidity))
-              console.log('results', index,  temperature.C, '°C', humidity.percent, 'RH%'))
+              console.log('repeat read #', index,  temperature.C, '°C', humidity.percent, 'RH%'))
             .catch(e => console.log('bulk error', e))
+            .then(() => waitMSecs(10))
+
           };
         }));
-      });
+      })
 
+      .finally(() => console.log('CLOSE'));
   })
   .catch(e => console.log('top level error', e));
