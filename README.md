@@ -48,6 +48,8 @@ Rasbus.i2c.init(I2C_DEVICE_ID , DEFAULT_ADDRESS)
   .catch(err => console.log('setup error', err));
 ```
 
+`from` takes a second `options` argument.  A value of `{ check: true }`, the default, will enable CRC reads from the bus, and validation on all calls.
+
 :page_facing_up: [`wake()`](#wake)
 
 :page_facing_up: [`info()`](#model--version--id) ([`model()`](#model--version--id), [`version()`](#model--version--id), [`id()`](#model--version--id))
@@ -76,7 +78,7 @@ While `wake` is titled as such from the perspective of the api, the bus level ca
 
 While not documented, trying to use a write command more than once per wake period seem to produce failures.
 
-Multiple reads from `bulk` `temperature` or `humidity` will return cached values from captured value at wake.
+Multiple reads from [`bulk`](#temperature--humidity) [`temperature`](#temperature--humidity) or [`humidity`](#temperature--humidity) will return cached values from captured value at wake.
 
 As example, calling all the bulk access methods for this chip.
 ```javascript
@@ -89,18 +91,20 @@ As example, calling all the bulk access methods for this chip.
     
 ```
 
-:warning: Sleep after wake is recommended. Anywhere from 5 to 400 ms has been observed to work. Many standard `Promise` timeout implementations exist, and a `setTimeout` wrapper works well.
+:warning: Sleep after `wake` is recommended. Anywhere from 5 to 400 ms has been observed to work. Many standard `Promise` timeout implementations exist, and a `setTimeout` wrapper works well.
 
 (note that while some timings work with *no* wait; others result usefull success ratio, but most fail without a minimum delay. While at the high end, the risk of allowing the chip to return to sleep state incresses).
 
 
 #### Model / Version / ID
 
-Reads the `model` `version` and 32-bit chip `id`. Or in a single call to `info`
+Reads the `model` `version` and 32-bit chip `id`, independently. Or in a single chip read via `info`.
 
 #### Status
 
-Like the above, the status register is (mostly) unused.  Though some undocumented interaction seems to exist (needs investigation)
+Like the above, the status register is (mostly) unused.
+
+Status is a writable byte register, via `setStatus`. Documented uses are unknown.
 
 #### User
 
@@ -132,11 +136,9 @@ Both the `read` and `write` register methods are exposed. Any use cases that byp
 
 ## Modbus
 
-The `Modbus` protocol includes a `crc16` checksum on each read / write.  This adds a layer of validation to the interactions and a level of confidence in the chips (and this libraries) operation.
+The **Modbus** protocol includes bydirectional CRC 16 (optional disable via `from` options).  This adds a layer of validation to the interactions and a level of confidence in the chips (and this libraries) operation.
 
-Many implemetation bypass the checksum (on both read and write), which provides some interfaction speed, but reduces confidence.  
-
-To this end, this library will provide a unsafe-fast-mode that reduces the `crc16` calls on read.
+Many implemetation bypass the CRC (on both read and write), with some benificial side effects, at the cost of confidence.
 
 
 ## Architecture limitation
