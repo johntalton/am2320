@@ -8,6 +8,7 @@ Including:
  - full read / write api
  - single register and bulk access
  - full `Promise` / `async` interface
+ - enable or disable crc (for speed?)
  - more complet Modbus error reporting
 
 As always, [Adafruit](https://www.adafruit.com/product/3721) is a good place to start.
