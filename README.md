@@ -27,6 +27,9 @@ The AM2320 will select the operational mode (1-Wire vs I²C) on power-on.  This 
 
 The easiest way to achive this is by adding pull-up resistors (to select I²C) to the SCL / SDA lines.  While boards like the Raspberry Pi have existing pull-up resistors they may not be sutable for this particular chip.
 
+The pins, when holding gril toward viewer (as above photo), are from left to right: 1, 2, 3, 4 (V<sub>DD</sub>, SDA, GND, SCL).
+
+
 ## API
 
 #### :blue_book: Class Am2320
@@ -182,10 +185,17 @@ Some standard rules form the datasheet:
 Error: ModBus error message: ILLEGAL_ADDRESS
 ```
 
-- Write to the `status` register (a single byte register), and attempt to write to `user1` 16-bit register.  While both (all three) are writable registers, the `status` register is explicitly to be wrien alone (Further enforcing the usfullness of the `setStatus` method).
+- Write to the `status` register (a single byte register), and attempt to write to `user1` 16-bit register, within a single call.  While both (all three) are writable registers, the `status` register is explicitly to be wrien alone (Further enforcing the usfullness of the `setStatus` method).
 ```javascript
   return device.wake()
     .then(() => device.write(0x0F, [0b00000001, 0x00, 0x25]))
+Error: ModBus error message: WRITE_DISABLED
+```
+
+ - Another WRITE_DISABLED failure comes when writing to address that is not writable. In this case we start at a writable address, but overflow (a correct write to the block would have used `USER_1_HIGH`).
+```javascript
+  return device.wake()
+    .then(() => device.write(REGISTERS.USER_1_LOW, [0x00, 0x2A, 0x00, 0x25]))
 Error: ModBus error message: WRITE_DISABLED
 ```
 
@@ -201,13 +211,6 @@ Error: ModBus error message: WRITE_DATA_SCOPE
   return device.wake()
     .then(() => device.write(REGISTERS.USER_1_HIGH, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
 Error: ModBus error message: WRITE_DATA_SCOPE
-```
-
- - Start writing to a register that is writable, but then overlaps with non-writable register. In this case we shif our four byte (or two `user1` and `user2` 16-bit registers) to a higher address value, in this case `USER_1_LOW` (a value bulk write of the user register via the `setUser` method would address from `USER_1_HIGH`).
-```javascript
-  return device.wake()
-    .then(() => device.write(REGISTERS.USER_1_LOW, [0x00, 0x2A, 0x00, 0x25]))
-Error: ModBus error message: WRITE_DISABLED
 ```
 
 ### Other
