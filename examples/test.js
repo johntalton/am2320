@@ -1,17 +1,16 @@
-const { Rasbus } = require('@johntalton/rasbus');
+/* eslint promise/no-nesting: ["warn"] */
+
+const i2c = require('i2c-bus');
+
+const { I2CAddressedBus } = require('@johntalton/and-other-delights');
 const { Am2320, DEFAULT_ADDRESS } = require('../');
 
-const i2cbusid = 1;
-
 function waitMSecs(msecs) {
-  return new Promise((resolve, reject) => {
-    console.log('wait', msecs);
-    setTimeout(() => resolve(), msecs);
-  });
+  return new Promise(resolve => setTimeout(resolve, msecs)); // eslint-disable-line promise/avoid-new
 }
 
 // note these ranges have little to do with what is documented and are
-//   primarly derived from imperical manual tests
+//   primarily derived from empirical manual tests
 const WAKE_WAIT_MSECS_RANGE = [5, 420]; // trial and error produced 300
 
 function waitRangeMSecs(range) {
@@ -27,7 +26,9 @@ function Promise_serial(list) {
   }, Promise.resolve());
 }
 
-Rasbus.i2c.init(i2cbusid, DEFAULT_ADDRESS)
+const busNumber = 1;
+i2c.openPromisified(busNumber)
+  .then(bus => new I2CAddressedBus(bus, DEFAULT_ADDRESS))
   .then(bus => Am2320.from(bus))
   .then(device => {
     console.log('Aosong AM2320 up');
@@ -40,7 +41,7 @@ Rasbus.i2c.init(i2cbusid, DEFAULT_ADDRESS)
 
       // woke false, indicating the bus was already valid
       //  but are limited time window as no reference time of last wake
-      //.then(() => device.wake()).then(woke => console.log('rewoke', woke))
+      //.then(() => device.wake()).then(woke => console.log('re-woke', woke))
 
 
 //    from README
@@ -52,11 +53,11 @@ Rasbus.i2c.init(i2cbusid, DEFAULT_ADDRESS)
 
       // .then(() => waitMSecs(300)) // todo, spec notes but works without as js is slow
 
-      // .then(() => device.model()).then(model => console.log('model', model))
-      // .then(() => device.version()).then(version => console.log('version', version))
-      // .then(() => device.id()).then(id => console.log('id', id))
+       .then(() => device.model()).then(model => console.log('model', model))
+       .then(() => device.version()).then(version => console.log('version', version))
+       .then(() => device.id()).then(id => console.log('id', id))
 
-      //.then(() => device.info()).then(info => console.log('info', info))
+      .then(() => device.info()).then(info => console.log('info', info))
 
       // .then(() => device.temperature()).then(temp => console.log('temperature (C)', temp))
       // .then(() => device.humidity()).then(hum => console.log('humidity (%RH)', hum))
@@ -100,7 +101,8 @@ Rasbus.i2c.init(i2cbusid, DEFAULT_ADDRESS)
 
       //.then(() => waitMSecs(300))
 
-      .then(() => device.user1()).then(user1 => console.log('user1', user1))
+      //.then(() => device.user1()).then(user1 => console.log('user1', user1))
+      .then(() => device.user()).then(({ user1, user2 }) => console.log('user', user1, user2))
 
       // .then(() => device.setUser2(69))
      // .then(() => device.user2()).then(user2 => console.log('user2', user2))
@@ -138,23 +140,29 @@ Rasbus.i2c.init(i2cbusid, DEFAULT_ADDRESS)
       .then(() => {
         // note, multiple calls to bulk seem to return single cached value, just demo
 
-        const MAX_I2C_BREAK_RUN = 1000; // todo observation, after about a K the device will start to fail (power reset needed)
-        const MAX_BULK_RUN = 120; // todo observation 140 before sleep reset, need timeing track
+        // todo observation, after about a K the device will start to fail (power reset needed)
+        const MAX_I2C_BREAK_RUN = 1000; // eslint-disable-line no-unused-vars
+
+        // todo observation 140 before sleep reset, need timing track
+        const MAX_BULK_RUN = 120; // eslint-disable-line no-unused-vars
+
         // all reads within the window are 'stable' however after about 10 calls there can
         // be a reset, which will be a run of errors, then the values will jump to next.
         // this is also a reset of the wake system.
-        const MAX_FIRST_BULK_RUN = 10; // todo observation, after about a dozen calls a reset happens for a half dozen more before entering a new wake state
+        // todo observation, after about a dozen calls a reset happens for a half dozen
+        //   more before entering a new wake state
+        const MAX_FIRST_BULK_RUN = 10; // eslint-disable-line no-unused-vars
         // note that the first run number seems to be more unstable, where the next block of max run seem to be a stable value
 
         // choosing a small range to validate (returns the same value until next wake cycle)
         const range = (new Array(5)).fill(0);
-        return  Promise_serial(range.map((value, index) => {
+        return Promise_serial(range.map((value, index) => {
           return () => {
 //return device.humidity().then(({ percent }) => console.log('RH %', percent))
             return device.bulk()
             .then(({ temperature, humidity }) =>
               //console.log('bulk log', temperature, humidity))
-              console.log('repeat read #', index,  temperature.C, '°C', humidity.percent, 'RH%'))
+              console.log('repeat read #', index, temperature.C, '°C', humidity.percent, 'RH%'))
             .catch(e => console.log('bulk error', e))
             .then(() => waitMSecs(10))
 

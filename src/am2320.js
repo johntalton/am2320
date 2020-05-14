@@ -1,3 +1,4 @@
+
 const { AmModbus } = require('./ammodbus.js');
 const { Util } = require('./util.js');
 const {
@@ -11,31 +12,9 @@ const {
 
 const DEFAULT_ADDRESS = 0x5C;
 
-const AUTO_DORMANT_MSECS = 3; // todo usefulness, investigate
-const MAX_READ_LENGTH = 10;
-
-class Converter {
-  static fromValue(value) { // todo, move to bit utilities
-    const isNeg = ((value >> 15) & 0x1) === 0x1;
-    const magnitude = value & 0x7FFF;
-    if(isNeg) { return -magnitude; }
-    return magnitude;
-  }
-
-  static fromTemperature(value) {
-    const tempC = Converter.fromValue(value) / 10.0;
-    const tempF = (tempC * (9 / 5.0)) + 32; // todo we have other sensor that use this
-    return {
-      C: tempC,
-      F: tempF
-    };
-  }
-
-  static fromHumidity(value) {
-    const percentRH = value / 10.0;
-    return { percent: percentRH };
-  }
-}
+// todo usefulness, investigate
+const AUTO_DORMANT_MSECS = 3; // eslint-disable-line no-unused-vars
+const MAX_READ_LENGTH = 10; // eslint-disable-line no-unused-vars
 
 /**
  *
@@ -110,7 +89,7 @@ class Am2320 {
   }
 
   user() {
-    return this.read(REGISTERS.USER_1_HIGH, WORD_SIZE +  WORD_SIZE)
+    return this.read(REGISTERS.USER_1_HIGH, WORD_SIZE + WORD_SIZE)
       .then(buffer => ({
         user1: buffer.readUInt16BE(0),
         user2: buffer.readUInt16BE(2)
@@ -123,17 +102,17 @@ class Am2320 {
     const oneH = (one >> 8) & 0xFF;
     const twoL = two & 0xFF;
     const twoH = (two >> 8) & 0xFF;
-    return this.write(REGISTERS.USER_1_HIGH, [oneH, oneL, twoH,  twoL]);
+    return this.write(REGISTERS.USER_1_HIGH, [oneH, oneL, twoH, twoL]);
   }
 
   humidity() {
     return this.read(REGISTERS.HUMIDITY_HIGH, WORD_SIZE).then(buffer => buffer.readUInt16BE())
-      .then(value => Converter.fromHumidity(value));
+      .then(value => Util.convertFromHumidity(value));
   }
 
   temperature() {
     return this.read(REGISTERS.TEMPERATURE_HIGH, WORD_SIZE).then(buffer => buffer.readUInt16BE())
-      .then(value => Converter.fromTemperature(value));
+      .then(value => Util.convertFromTemperature(value));
   }
 
   bulk() {
@@ -142,8 +121,8 @@ class Am2320 {
         const hum = buffer.readUInt16BE(0);
         const temp = buffer.readUInt16BE(2);
         return {
-          humidity: Converter.fromHumidity(hum),
-          temperature: Converter.fromTemperature(temp)
+          humidity: Util.convertFromHumidity(hum),
+          temperature: Util.convertFromTemperature(temp)
         };
       });
   }
