@@ -18,7 +18,6 @@
   },
   "devDependencies": {
     "eslint": "^7.0.0",
-    "eslint-config-google": "^0.14.0",
     "eslint-plugin-fp": "^2.3.0",
     "eslint-plugin-immutable": "^1.0.0",
     "eslint-plugin-import": "^2.12.0",
