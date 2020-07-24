@@ -8,7 +8,7 @@ A more complete interface for a simple I²C Temperature and Humidity Sensor.
 ![GitHub](https://img.shields.io/github/license/johntalton/am2320)
 [![Downloads Per Month](https://img.shields.io/npm/dm/@johntalton/am2320.svg)](https://www.npmjs.com/package/@johntalton/am2320)
 ![GitHub last commit](https://img.shields.io/github/last-commit/johntalton/am2320)
-
+[![Package Quality](https://npm.packagequality.com/shield/%40johntalton%2Fam2320.svg)](https://packagequality.com/#?package=@johntalton/am2320)
 
 Including:
  - access to humidity and temperature as well as status, and info
