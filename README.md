@@ -5,6 +5,7 @@ A more complete interface for a simple I²C Temperature and Humidity Sensor.
 [![npm Version](https://img.shields.io/npm/v/@johntalton/am2320.svg)](https://www.npmjs.com/package/@johntalton/am2320)
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/johntalton/am2320)
 ![CI](https://github.com/johntalton/am2320/workflows/CI/badge.svg?branch=master&event=push)
+![CodeQL](https://github.com/johntalton/am2320/workflows/CodeQL/badge.svg)
 ![GitHub](https://img.shields.io/github/license/johntalton/am2320)
 [![Downloads Per Month](https://img.shields.io/npm/dm/@johntalton/am2320.svg)](https://www.npmjs.com/package/@johntalton/am2320)
 ![GitHub last commit](https://img.shields.io/github/last-commit/johntalton/am2320)
