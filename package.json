@@ -13,7 +13,7 @@
     "url": "git://github.com/johntalton/am2320.git"
   },
   "dependencies": {
-    "@johntalton/and-other-delights": "^3.0.2",
+    "@johntalton/and-other-delights": "^5.0.0",
     "crc": "^3.5.0"
   },
   "devDependencies": {
