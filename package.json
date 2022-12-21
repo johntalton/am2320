@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@johntalton/and-other-delights": "^3.0.2",
-    "crc": "^3.5.0"
+    "crc": "^4.2.0"
   },
   "devDependencies": {
     "eslint": "^8.30.0",
