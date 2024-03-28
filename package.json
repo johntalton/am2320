@@ -14,7 +14,7 @@
     "url": "git://github.com/johntalton/am2320.git"
   },
   "dependencies": {
-    "@johntalton/and-other-delights": "^3.0.2",
+    "@johntalton/and-other-delights": "^7.0.0",
     "crc": "^4.3.2",
     "eslint-plugin-mocha": "^10.4.1"
   },
