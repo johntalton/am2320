@@ -4,7 +4,7 @@ A more complete interface for a simple I²C Temperature and Humidity Sensor.
 
 [![npm Version](https://img.shields.io/npm/v/@johntalton/am2320.svg)](https://www.npmjs.com/package/@johntalton/am2320)
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/johntalton/am2320)
-![CI](https://github.com/johntalton/am2320/workflows/CI/badge.svg?branch=master&event=push)
+![CI](https://github.com/johntalton/am2320/workflows/CI/badge.svg)
 ![CodeQL](https://github.com/johntalton/am2320/workflows/CodeQL/badge.svg)
 ![GitHub](https://img.shields.io/github/license/johntalton/am2320)
 [![Downloads Per Month](https://img.shields.io/npm/dm/@johntalton/am2320.svg)](https://www.npmjs.com/package/@johntalton/am2320)
@@ -78,13 +78,13 @@ Rasbus.i2c.init(I2C_DEVICE_ID , DEFAULT_ADDRESS)
 
 ## I²C interface
 
-TLDR:  As noted in the bellow sections the chip is, fickle at times. 
+TLDR:  As noted in the bellow sections the chip is, fickle at times.
 
 #### Wake
 
 To save power and to provide more accurate readings (by not heating up the chip) the AM2320 goes into a deep-sleep.  So much so that the I²C interface is put to sleep (which is why many forum post are titled 'not working').
 
-This auto-sleep requires a `wake` method call prior to interacting with the standard interface.  Once woken the chip will responde to I²C commands, however, there is a limited access window to execute command before the chip will return to the sleep state. 
+This auto-sleep requires a `wake` method call prior to interacting with the standard interface.  Once woken the chip will responde to I²C commands, however, there is a limited access window to execute command before the chip will return to the sleep state.
 
 While `wake` is titled as such from the perspective of the api, the bus level call is just a read (specific type, see bellow), and all failures are suppressed (as expected on first wake). The result of this is that "waking" the chip is not a garantee of successfull wake, or that the chip was not already woken (and thus effecting the remaining time for command execution).
 
@@ -100,7 +100,7 @@ As example, calling all the bulk access methods for this chip.
     .then(() => device.status().then(console.log))
     .then(() => device.user().then(console.log))
     .then(() => device.bulk().then(console.log))
-    
+
 ```
 
 :warning: Sleep after `wake` is recommended. Anywhere from 5 to 400 ms has been observed to work. Many standard `Promise` timeout implementations exist, and a `setTimeout` wrapper works well.
@@ -166,7 +166,7 @@ The implementation is also tied to the underlining bus system and it behaviors.
 Notably if the chip is queried improperly (to fast, not fast enough, for to long, etc) the it may go into a hard fail state. This state requires power cycle to bring the interface back online (no current combination of read/writes seem to effect its state).
 
 
-Further, the bus layer returns similar error code making error prone to try and evaluate them at this level.  
+Further, the bus layer returns similar error code making error prone to try and evaluate them at this level.
 
 Other limitation of using the `/dev/i2c-1 ` interface (via `i2c-bus`) present many timing error that could otherwize be mitigated as general exceptions to the bus layer.
 
@@ -174,7 +174,7 @@ Other limitation of using the `/dev/i2c-1 ` interface (via `i2c-bus`) present ma
 As noted in reference to `wake`, the timing is left much to the caller.  However, the noted nature of the transaction make this timing prone to external factors, and thus a wider range of enviroment testing is needed.
 
 
-A note should be made of the delicate intermix of I²C `write` `readBuffer` (in `read`) and `writeBuffer` `readBuffer` (in `write`) as well as the use of `read` in the `wake` command.  The use of the SMBus command set, and the lack of consistency indicate poor understanding of chips operation. 
+A note should be made of the delicate intermix of I²C `write` `readBuffer` (in `read`) and `writeBuffer` `readBuffer` (in `write`) as well as the use of `read` in the `wake` command.  The use of the SMBus command set, and the lack of consistency indicate poor understanding of chips operation.
 
 ## Failure profiles
 
@@ -182,7 +182,7 @@ A note should be made of the delicate intermix of I²C `write` `readBuffer` (in 
 
 While high level api calls (such as `info`, `bulk`, `humidity` etc) are the intended public interface, the Modbus `read` / `write` are also exposed.
 
-And while the high level api should not produce these errors, they can still be exposed when parsing unexpected / invalid bus data as a result of malformed or corrupted interaction. 
+And while the high level api should not produce these errors, they can still be exposed when parsing unexpected / invalid bus data as a result of malformed or corrupted interaction.
 
 
 Some standard rules form the datasheet:
@@ -223,11 +223,11 @@ Error: ModBus error message: WRITE_DATA_SCOPE
 ```
 
 ### Other
-The bus / chip failures seem to be common. while some notes about single write per wake sesion and limiting number of reads and the timing between the have been noted above.  
+The bus / chip failures seem to be common. while some notes about single write per wake sesion and limiting number of reads and the timing between the have been noted above.
 
 Other failure cases seems to exist
  - the `wake`/`bulk` poll cycle seems to fall into a toggling success / failure state
  - long runs of calls (1K calls to `bulk` in a row) can knock the chip offline, requiring power cycle
  - all timing error represnet themselves as critical bus failures
- 
- 
+
+
